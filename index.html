@@ -1,0 +1,628 @@
+﻿<!DOCTYPE html>
+<html lang="en" style="margin: 0px; padding: 0px; width: 100%; height: 100%">
+<head>
+    <title>NGL - embedded</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <style>
+        canvas {
+            background-color: #18141E !important;
+        }
+    </style>
+</head>
+
+<body style="width:100vw;height:100vh">
+    <label for="fileSelector">
+        Choose a PDB file
+    </label>
+    <input type="file" accept=".pdb" id="fileSelector" onChange="onFileChange()"/>
+    <div id="viewport"
+         style="height: 100%; margin: 0px; padding: 0px; background-color:#18141E">
+    </div>
+
+
+    <script src="ngl.js"></script>
+    <script>
+        var assemblySelect;
+
+		var baseCheckbox;
+		
+		var chainAnnotCheckbox;
+
+		var font_style = "11px arial,sans-serif";
+
+		var ionCheckbox;
+
+		var ligandAnnotCheckbox;
+		
+		var ligandCheckbox;
+
+		var ligandsurfCheckbox;
+
+		var resLabelsCheckbox;
+
+		var sidechainsSelect;
+
+		var stage;
+
+		var structureSelect;
+		
+		var waterCheckbox;
+
+        function onFileChange() {
+            const fileSelector = document.getElementById("fileSelector");
+            const files = fileSelector.files;
+            if (files.length == 1) {
+                const pdbFile = files[0];
+                loadStructure(pdbFile);
+            }
+		}
+
+        function loadStructure(pdbFile) {
+            try {
+                let el = document.getElementById("viewport");
+                el.innerHTML = "";
+                stage = new NGL.Stage("viewport");
+
+                //let stringBlob = new Blob([pdbText], { type: 'text/plain' });
+                stage.loadFile(pdbFile, { ext: "pdb" }).then(function (o) {
+                    o.addRepresentation("cartoon", {
+                        sele: "polymer",
+                        name: "polymer",
+						assembly: "AU"
+						});  // pass schemeId  here
+					// add solvent molecules to viewer
+					o.addRepresentation("ball+stick", {
+						name: "water",
+						sele: "water",
+						colorScheme: "element"
+					});
+					// add ion molecules to viewer
+					o.addRepresentation("spacefill", {
+						name: "ion",
+						sele: "ion",
+						colorScheme: "element"
+					});
+					// add nucleic acids and base pairs to viewer, if applicable
+					o.addRepresentation("ribbon", {
+						name: "nucleic",
+						sele: "nucleic",
+						colorScheme: "element"
+					});
+					o.addRepresentation("base", {
+						name: "base"
+					});
+					// add ligand to viewer, if applicable
+					o.addRepresentation("ball+stick", {
+						name: "ligand",
+						sele: "ligand",
+						colorScheme: "element"
+					});
+					o.addRepresentation("surface", {
+						name: "ligand_surf",
+						sele: "ligand",
+						surfaceType: "av",
+						smooth: 2,
+						probeRadius: 1.4,
+						scaleFactor: 2.0,
+						flatShaded: false,
+						opacity: 0.1,
+						lowResolution: false,
+						colorValue: "gray"
+					});
+
+					o.autoView();
+                });
+				
+				function createElement(name, properties, style) {
+					var elem = document.createElement(name);
+					Object.assign(elem, properties);
+					Object.assign(elem.style, style);
+					return elem;
+				};
+
+				function addElement(elem) {
+					Object.assign(elem.style, {
+						position: "absolute",
+						zIndex: 10
+					});
+					stage.viewer.container.appendChild(elem);
+				};
+
+				function createSelect(options, properties, style) {
+					var select = createElement("select", properties, style);
+					options.forEach(function (d) {
+						select.add(createElement("option", {
+							value: d[0], text: d[1]
+						}));
+					});
+					return select;
+				};
+
+				var assemblyText = createElement("span", {
+					innerText: "Assembly Representation Style",
+				}, { top: "40px", left: "16px", color: "white" }
+				);
+
+				addElement(assemblyText);
+
+				assemblyText.style.font = font_style;
+
+				assemblySelect = createSelect([
+					["AU", "Asymmetric Unit"],
+					["BU1", "Bioassembly 1"],
+					["BU2", "Bioassembly 2"],
+					["UNITCELL", "Unitcell"],
+					["SUPERCELL", "Supercell"]
+				], {
+					title: "Change assembly representation style",
+					onchange: function (e) {
+						stage.eachComponent(function (o) {
+							o.removeAllRepresentations();
+							o.addRepresentation(structureSelect.value, {
+								sele: "polymer",
+								name: "polymer",
+								assembly: e.target.value
+							}); // pass schemeId  here
+							// add solvent molecules to viewer
+							var water_toggle = o.addRepresentation("ball+stick", {
+								name: "water",
+								sele: "water",
+								assembly: e.target.value,
+								colorScheme: "element"
+							});
+							water_toggle.setVisibility(waterCheckbox.checked);
+							// add ion molecules to viewer
+							var ion_toggle = o.addRepresentation("spacefill", {
+								name: "ion",
+								sele: "ion",
+								assembly: e.target.value,
+								colorScheme: "element"
+							});
+							ion_toggle.setVisibility(ionCheckbox.checked);
+							// add nucleic acids and base pairs to viewer, if applicable
+							o.addRepresentation("ribbon", {
+								name: "nucleic",
+								sele: "nucleic",
+								assembly: e.target.value,
+								colorScheme: "element"
+							});
+							var base_toggle = o.addRepresentation("base", {
+								name: "base",
+								assembly: e.target.value
+							});
+							base_toggle.setVisibility(baseCheckbox.checked);
+							// add ligand to viewer, if applicable
+							var ligand_toggle = o.addRepresentation("ball+stick", {
+								name: "ligand",
+								sele: "ligand",
+								assembly: e.target.value,
+								colorScheme: "element"
+							});
+							ligand_toggle.setVisibility(ligandCheckbox.checked);
+							var ligandsurf_toggle = o.addRepresentation("surface", {
+								name: "ligand_surf",
+								sele: "ligand",
+								assembly: e.target.value,
+								surfaceType: "av",
+								smooth: 2,
+								probeRadius: 1.4,
+								scaleFactor: 2.0,
+								flatShaded: false,
+								opacity: 0.1,
+								lowResolution: false,
+								colorValue: "gray"
+							});
+							ligandsurf_toggle.setVisibility(ligandsurfCheckbox.checked);
+							// add labels to residues
+							o.structure.eachChain(function (cp) {
+								var res_label = o.addRepresentation("label", {
+									name: "res_label",
+									sele: ".CA",
+									assembly: e.target.value,
+									color: "element",
+									labelType: "format",
+									//labelFormat: "" + cp.entity.description + " %(resname)s%(resno)s"
+									labelFormat: "%(resname)s%(resno)s"
+								});
+								res_label.setVisibility(resLabelsCheckbox.checked);
+							}, new NGL.Selection("polymer"));
+							// get all sidechain atoms around ligand
+							var selection = new NGL.Selection("ligand");
+							var radius = sidechainsSelect.value;
+							// get first (and only) loaded component: protein-ligand system
+							var system = this.stage.compList[0];
+							// store current selection, we will need it later
+							var prevSele = system.selection.string;
+							// set selection to desired ligand
+							system.setSelection("{selection}");
+							// select all atoms within selected distance from the ligand
+							var around = system.structure.getAtomSetWithinSelection(selection, radius);
+							// extend selection so it includes full residues
+							var around_complete = system.structure.getAtomSetWithinGroup(around);
+							// update selection to include only sidechain atoms
+							var sidechain_sele = "(" + around_complete.toSeleString() + ") and not ligand";
+							// add representation for selected atoms
+							system.addRepresentation("ball+stick", {
+								name: "sidechains",
+								sele: sidechain_sele,
+								assembly: e.target.value,
+								colorScheme: "element"
+							});
+							system.setSelection(prevSele);
+						});
+						stage.autoView();
+					}
+				}, { top: "55px", left: "16px" });
+
+				addElement(assemblySelect);
+
+				assemblySelect.style.font = font_style;
+
+				var structureText = createElement("span", {
+					innerText: "Structure Representation Style",
+				}, { top: "80px", left: "16px", color: "white" }
+				);
+
+				addElement(structureText);
+
+				structureText.style.font = font_style;
+
+				structureSelect = createSelect([
+					["cartoon", "Cartoon"],
+					["backbone", "Backbone"],
+					["licorice", "Licorice"],
+					["ribbon", "Ribbon"],
+					["tube", "Tube"]
+				], {
+					title: "Change structure representation style",
+					onchange: function (e) {
+						stage.getRepresentationsByName("polymer").dispose();
+						stage.eachComponent(function (o) {
+							o.addRepresentation(e.target.value, {
+								sele: "polymer",
+								name: "polymer",
+								assembly: assemblySelect.value
+							}); // pass schemeId  here
+						});
+					}
+				}, { top: "95px", left: "16px" });
+
+				addElement(structureSelect);
+
+				structureSelect.style.font = font_style;
+
+				chainAnnotCheckbox = createElement("input", {
+					type: "checkbox",
+					title: "Show/hide chain annotations",
+					checked: false,
+					onchange: function (e) {
+						if (console.log) console.log(e.target.checked);
+						stage.eachComponent(function (o) {
+							o.removeAllAnnotations();
+							// add annotations to chains
+							var ap = o.structure.getAtomProxy();
+							o.structure.eachChain(function (cp) {
+								ap.index = cp.atomOffset + Math.floor(cp.atomCount / 2);
+								//var chain_annot = o.addAnnotation(ap.positionToVector3(), cp.entity.description);
+								var chain_annot = o.addAnnotation(ap.positionToVector3(), "" + cp.entity.description + " {MOLECULE " + cp.chainid + "}");
+								chain_annot.setVisibility(e.target.checked);
+							}, new NGL.Selection("polymer"));
+							// add annotations to ligands
+							o.structure.eachChain(function (cp) {
+								ap.index = cp.atomOffset + Math.floor(cp.atomCount / 2);
+								//var ligand_annot = o.addAnnotation(ap.positionToVector3(), cp.entity.description);
+								var ligand_annot = o.addAnnotation(ap.positionToVector3(), "" + cp.entity.description + " {MOLECULE " + (cp.chainid - 1) + "}");
+								ligand_annot.setVisibility(ligandAnnotCheckbox.checked);
+							}, new NGL.Selection("ligand"));
+						});
+					}
+				}, { top: "140px", left: "12px" }
+				);
+
+				addElement(chainAnnotCheckbox);
+
+				var chainAnnot = createElement("span",
+					{ innerText: "Chain Annotations" },
+					{ top: "143px", left: "32px", color: "white" }
+				);
+
+				addElement(chainAnnot);
+
+				chainAnnot.style.font = font_style;
+				
+				ligandAnnotCheckbox = createElement("input", {
+					type: "checkbox",
+					title: "Show/hide ligand and ion annotations",
+					checked: false,
+					onchange: function (e) {
+						if (console.log) console.log(e.target.checked);
+						stage.eachComponent(function (o) {
+							o.removeAllAnnotations();
+							// add annotations to chains
+							var ap = o.structure.getAtomProxy();
+							o.structure.eachChain(function (cp) {
+								ap.index = cp.atomOffset + Math.floor(cp.atomCount / 2);
+								//chain_annot = o.addAnnotation(ap.positionToVector3(), cp.entity.description);
+								var chain_annot = o.addAnnotation(ap.positionToVector3(), "" + cp.entity.description + " {MOLECULE " + cp.chainid + "}");
+								chain_annot.setVisibility(chainAnnotCheckbox.checked);
+							}, new NGL.Selection("polymer"));
+							// add annotations to ligands
+							o.structure.eachChain(function (cp) {
+								ap.index = cp.atomOffset + Math.floor(cp.atomCount / 2);
+								//ligand_annot = o.addAnnotation(ap.positionToVector3(), cp.entity.description);
+								var ligand_annot = o.addAnnotation(ap.positionToVector3(), "" + cp.entity.description + " {MOLECULE " + (cp.chainid - 1) + "}");
+								ligand_annot.setVisibility(e.target.checked);
+							}, new NGL.Selection("ligand"));
+						});
+					}
+				}, { top: "160px", left: "12px" }
+				);
+
+				addElement(ligandAnnotCheckbox);
+
+				var ligandAnnot = createElement("span",
+					{ innerText: "Ligand & Ion Annotations" },
+					{ top: "163px", left: "32px", color: "white" }
+				);
+
+				addElement(ligandAnnot);
+
+				ligandAnnot.style.font = font_style;				
+
+				resLabelsCheckbox = createElement("input", {
+					type: "checkbox",
+					title: "Show/hide residue labels",
+					checked: false,
+					onchange: function (e) {
+						if (console.log) console.log(e.target.checked);
+						stage.getRepresentationsByName("res_label").dispose();
+						stage.eachComponent(function (o) {
+							// add labels to residues
+							o.structure.eachChain(function (cp) {
+								var res_label = o.addRepresentation("label", {
+									name: "res_label",
+									sele: ".CA",
+									assembly: assemblySelect.value,
+									color: "element",
+									labelType: "format",
+									//labelFormat: "(" + cp.entity.description + ") %(resname)s%(resno)s"
+									labelFormat: "%(resname)s%(resno)s"
+								});
+								res_label.setVisibility(e.target.checked);
+							}, new NGL.Selection("polymer"));
+						});
+					}
+				}, { top: "180px", left: "12px" }
+				);
+
+				addElement(resLabelsCheckbox);
+
+				var resLabels = createElement("span",
+					{ innerText: "Residue Labels" },
+					{ top: "183px", left: "32px", color: "white" }
+				);
+
+				addElement(resLabels);
+
+				resLabels.style.font = font_style;
+
+				baseCheckbox = createElement("input", {
+					type: "checkbox",
+					title: "Show/hide base pairs",
+					checked: true,
+					onchange: function (e) {
+						if (console.log) console.log(e.target.checked);
+						stage.getRepresentationsByName("base").setVisibility(e.target.checked);
+					}
+				}, { top: "220px", left: "12px" }
+				);
+
+				addElement(baseCheckbox);
+
+				var basePairs = createElement("span",
+					{ innerText: "Base Pairs" },
+					{ top: "223px", left: "32px", color: "white" }
+				);
+
+				addElement(basePairs);
+
+				basePairs.style.font = font_style;
+
+				ionCheckbox = createElement("input", {
+					type: "checkbox",
+					title: "Show/hide ions",
+					checked: true,
+					onchange: function (e) {
+						if (console.log) console.log(e.target.checked);
+						stage.getRepresentationsByName("ion").setVisibility(e.target.checked);
+					}
+				}, { top: "240px", left: "12px" }
+				);
+
+				addElement(ionCheckbox);
+
+				var Ions = createElement("span",
+					{ innerText: "Ions" },
+					{ top: "243px", left: "32px", color: "white" }
+				);
+
+				addElement(Ions);
+
+				Ions.style.font = font_style;
+
+				ligandCheckbox = createElement("input", {
+					type: "checkbox",
+					title: "Show/hide molecular ligand representations",
+					checked: true,
+					onchange: function (e) {
+						if (console.log) console.log(e.target.checked);
+						stage.getRepresentationsByName("ligand").setVisibility(e.target.checked);
+					}
+				}, { top: "260px", left: "12px" }
+				);
+
+				addElement(ligandCheckbox);
+
+				var Ligand = createElement("span",
+					{ innerText: "Ligands" },
+					{ top: "263px", left: "32px", color: "white" }
+				);
+
+				addElement(Ligand);
+
+				Ligand.style.font = font_style;
+
+				ligandsurfCheckbox = createElement("input", {
+					type: "checkbox",
+					title: "Show/hide surface ligand representations",
+					checked: true,
+					onchange: function (e) {
+						if (console.log) console.log(e.target.checked);
+						stage.getRepresentationsByName("ligand_surf").setVisibility(e.target.checked);
+					}
+				}, { top: "280px", left: "12px" }
+				);
+
+				addElement(ligandsurfCheckbox);
+
+				var ligandSurf = createElement("span",
+					{ innerText: "Ligand Surfaces" },
+					{ top: "283px", left: "32px", color: "white" }
+				);
+
+				addElement(ligandSurf);
+
+				ligandSurf.style.font = font_style;
+
+				waterCheckbox = createElement("input", {
+					type: "checkbox",
+					title: "Show/hide water molecules",
+					checked: true,
+					onchange: function (e) {
+						if (console.log) console.log(e.target.checked);
+						stage.getRepresentationsByName("water").setVisibility(e.target.checked);
+					}
+				}, { top: "300px", left: "12px" }
+				);
+
+				addElement(waterCheckbox);
+
+				var Water = createElement("span",
+					{ innerText: "Water" },
+					{ top: "303px", left: "32px", color: "white" }
+				);
+
+				addElement(Water);
+
+				Water.style.font = font_style;
+
+				var sidechainsText = createElement("span", {
+					innerText: "Sidechains Around Ligands",
+				}, { top: "340px", left: "16px", color: "white" }
+				);
+
+				addElement(sidechainsText);
+
+				sidechainsText.style.font = font_style;
+
+				sidechainsSelect = createSelect([
+					["0", "None"],
+					["5", "Within 5 Å"],
+					["10", "Within 10 Å"],
+					["15", "Within 15 Å"],
+					["20", "Within 20 Å"]
+				], {
+					title: "Show residues around ligands within selected radius",
+					onchange: function (e) {
+						stage.getRepresentationsByName("sidechains").dispose();
+						stage.eachComponent(function () {
+							// get all sidechain atoms around ligand
+							var selection = new NGL.Selection("ligand");
+							var radius = e.target.value;
+							// get first (and only) loaded component: protein-ligand system
+							var system = this.stage.compList[0];
+							// store current selection, we will need it later
+							var prevSele = system.selection.string;
+							// set selection to desired ligand
+							system.setSelection("{selection}");
+							// select all atoms within selected distance from the ligand
+							var around = system.structure.getAtomSetWithinSelection(selection, radius);
+							// extend selection so it includes full residues
+							var around_complete = system.structure.getAtomSetWithinGroup(around);
+							// update selection to include only sidechain atoms
+							var sidechain_sele = "(" + around_complete.toSeleString() + ") and not ligand";
+							// add representation for selected atoms
+							system.addRepresentation("ball+stick", {
+								name: "sidechains",
+								sele: sidechain_sele,
+								assembly: assemblySelect.value,
+								colorScheme: "element"
+							});
+							system.setSelection(prevSele);
+						});
+					}
+				}, { top: "355px", left: "16px" });
+
+				addElement(sidechainsSelect);
+
+				sidechainsSelect.style.font = font_style;
+
+				var centerButton = createElement("input", {
+					type: "button",
+					title: "Reset structure position to default",
+					value: "Auto Center + Zoom",
+					onclick: function () {
+						stage.autoView();
+					}
+				}, { top: "740px", left: "16px" }
+				);
+
+				addElement(centerButton);
+
+				centerButton.style.font = font_style;
+
+				var screenshotButton = createElement("input", {
+					type: "button",
+					title: "Take screenshot and download PNG",
+					value: "Screenshot",
+					onclick: function () {
+						stage.makeImage({
+							factor: 1,
+							antialias: false,
+							trim: false,
+							transparent: false
+						}).then(function (blob) {
+							NGL.download(blob, "ps-native-structure-viewer-screenshot.png")
+						});
+					}
+				}, { top: "740px", left: "138px" }
+				);
+
+				addElement(screenshotButton);
+
+				screenshotButton.style.font = font_style;
+
+				var spinButton = createElement("input", {
+					type: "button",
+					title: "Toggle spin on/off along y-axis",
+					value: "Spin",
+					onclick: function () {
+						stage.toggleSpin();
+					}
+				}, { top: "740px", left: "217px" }
+				);
+
+				addElement(spinButton);
+
+				spinButton.style.font = font_style;
+
+                return true;
+            } catch (error) {
+                console.log(error);
+                return false;
+            }
+        }
+    </script>
+</body>
+</html>
