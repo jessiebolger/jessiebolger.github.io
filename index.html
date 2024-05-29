@@ -13,7 +13,7 @@
 
 <body style="width:100vw;height:100vh">
     <label for="fileSelector">
-        Choose a PDB file
+        Choose local PDB file:
     </label>
     <input type="file" accept=".pdb" id="fileSelector" onChange="onFileChange()"/>
     <div id="viewport"
@@ -593,7 +593,7 @@
 							trim: false,
 							transparent: false
 						}).then(function (blob) {
-							NGL.download(blob, "ps-native-structure-viewer-screenshot.png")
+							NGL.download(blob, "ngl-viewer-screenshot.png")
 						});
 					}
 				}, { top: "740px", left: "138px" }
@@ -603,6 +603,20 @@
 
 				screenshotButton.style.font = font_style;
 
+				var rockButton = createElement("input", {
+					type: "button",
+					title: "Toggle rock on/off along y-axis",
+					value: "Rock",
+					onclick: function () {
+						stage.toggleRock();
+					}
+				}, { top: "740px", left: "217px" }
+				);
+
+				addElement(rockButton);
+
+				rockButton.style.font = font_style;
+
 				var spinButton = createElement("input", {
 					type: "button",
 					title: "Toggle spin on/off along y-axis",
@@ -610,7 +624,7 @@
 					onclick: function () {
 						stage.toggleSpin();
 					}
-				}, { top: "740px", left: "217px" }
+				}, { top: "740px", left: "265px" }
 				);
 
 				addElement(spinButton);
